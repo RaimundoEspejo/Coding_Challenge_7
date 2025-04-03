@@ -1,0 +1,123 @@
+---
+title: "Coding_Challenge_7"
+author: "Raimundo Espejo and Camila Cuadrado"
+date: "2025-04-03"
+output: pdf_document
+---
+
+1. Read in the data called “PlantEmergence.csv” using a relative file path and load the following libraries. tidyverse, lme4, emmeans, multcomp, and multcompView. Turn the Treatment , DaysAfterPlanting  and Rep into factors using the function as.factor
+
+```{r}
+# Load the libraries
+library(tidyverse)
+library(lme4)
+library(emmeans)
+library(multcomp)
+library(multcompView)
+
+# Read in the CSV data using a relative file path
+STAND <- read_csv("PlantEmergence.csv")
+
+# Convert relevant columns to factors
+STAND$Treatment <- as.factor(STAND$Treatment)
+STAND$DaysAfterPlanting <- as.factor(STAND$DaysAfterPlanting)
+STAND$Rep <- as.factor(STAND$Rep)
+```
+
+2. Fit a linear model to predict Emergence using Treatment and DaysAfterPlanting along with the interaction. Provide the summary of the linear model and ANOVA results. 
+
+```{r}
+# Fit the model with interaction
+linear_model <- lm(Emergence ~ Treatment * DaysAfterPlanting, data = STAND)
+
+# Summary of the linear model
+summary(linear_model)
+
+# ANOVA results
+anova(linear_model)
+```
+
+3. Based on the results of the linear model in question 2, do you need to fit the interaction term? Provide a simplified linear model without the interaction term but still testing both main effects. Provide the summary and ANOVA results. Then, interpret the intercept and the coefficient for Treatment 2.
+
+```{r}
+# Fit the simplified model (no interaction)
+linear_model_2 <- lm(Emergence ~ Treatment + DaysAfterPlanting, data = STAND)
+
+# Summary
+summary(linear_model_2)
+
+# ANOVA
+anova(linear_model_2)
+```
+
+Interpretation of the intercept and the coefficient for treatment 2:
+
+- Intercept: The intercept in this model represents the predicted mean Emergence for the reference levels of each factor (i.e., the first level of Treatment and the first level of DaysAfterPlanting).
+- Coefficient for Treatment2: This coefficient tells us the difference in Emergence between Treatment 2 and the reference Treatment (Treatment 1), holding DaysAfterPlanting at its reference level.
+
+For example, if Treatment1 is the reference, a positive slope for Treatment2 means that plants under Treatment 2 have, on average, higher Emergence than those under Treatment 1 (assuming the difference is statistically significant). A negative slope would mean the opposite.
+
+4. Calculate the least square means for Treatment using the emmeans package and perform a Tukey separation with the compact letter display using the cld function. Interpret the results.
+
+```{r}
+# Calculate lsmeans for Treatment based on the simplified model linear_model_2
+(lsm_treatment <- emmeans(linear_model_2, ~ Treatment))
+
+# Perform Tukey pairwise comparisons and get compact letter display
+(treatment_cld <- cld(lsm_treatment, alpha = 0.05, Letters = letters))
+```
+
+Interpretation: Treatment 2 stands out with the lowest mean emergence (55.6) and does not share any letters with the other treatments, indicating it is significantly lower than all others. Treatment 7 has a higher mean emergence (188.0) than Treatment 2, but because it has the letter “b” and Treatments 1, 9, 4, and 8 have “bc,” Treatment 7 is not significantly different from that “bc” group. Treatments 1, 9, 4, and 8 overlaps with both Treatment 7 (“b”) and Treatments 6, 3, and 5 (“c”). Treatments 6, 3, and 5 show the highest means, forming the top group and sharing no letters with Treatment 2 or 7, meaning they are significantly higher than those two. Consequently, there are three layers of mean emergence: the lowest group (Treatment 2), a middle cluster (Treatments 7, 1, 9, 4, and 8), and the highest group (Treatments 6, 3, and 5).
+
+5. The provided function lets you dynamically add a linear model plus one factor from that model and plots a bar chart with letters denoting treatment differences. 
+Use this model to generate the plot shown below. Explain the significance of the letters. 
+
+```{r}
+# Define the function to create a bar chart with letters showing significant differences
+plot_cldbars_onefactor <- function(lm_model, factor) {
+  data <- lm_model$model
+  variables <- colnames(lm_model$model)
+  dependent_var <- variables[1]
+  independent_vars <- variables[2:length(variables)]
+  
+  lsmeans <- emmeans(lm_model, as.formula(paste("~", factor))) # estimate lsmeans
+  Results_lsmeans <- cld(lsmeans, alpha = 0.05, reversed = TRUE, details = TRUE, Letters = letters)
+  
+  # Extract the letters for the bars
+  sig.diff.letters <- data.frame(Results_lsmeans$emmeans[,1], 
+                                 str_trim(Results_lsmeans$emmeans[,7]))
+  colnames(sig.diff.letters) <- c(factor, "Letters")
+  
+  # Summarize means for plotting and merge with letters
+  ave_stand2 <- lm_model$model %>%
+    group_by(!!sym(factor)) %>%
+    summarize(
+      ave.emerge = mean(.data[[dependent_var]], na.rm = TRUE),
+      se = sd(.data[[dependent_var]]) / sqrt(n())
+    ) %>%
+    left_join(sig.diff.letters, by = factor) %>%
+    mutate(letter_position = ave.emerge + 10 * se)
+  
+  # Create the plot
+  plot <- ggplot(data, aes(x = !! sym(factor), y = !! sym(dependent_var))) + 
+    stat_summary(fun = mean, geom = "bar") +
+    stat_summary(fun.data = mean_se, geom = "errorbar", width = 0.5) +
+    ylab("Number of emerged plants") + 
+    geom_jitter(width = 0.02, alpha = 0.5) +
+    geom_text(data = ave_stand2, aes(label = Letters, y = letter_position), size = 5) +
+    xlab(as.character(factor)) +
+    theme_classic()
+  
+  return(plot)
+}
+
+# Now call this function with our simplified model (linear_model_2) and the factor we are interested in, "Treatment"
+my_plot <- plot_cldbars_onefactor(linear_model_2, "Treatment")
+my_plot
+```
+
+Interpretation: The letters above each bar indicate which treatments differ significantly. Treatments that share at least one letter are not significantly different, while those with no letters in common are significantly different.
+
+6. Generate the gfm .md file along with a .html, .docx, or .pdf. Commit, and push the .md file to github and turn in the .html, .docx, or .pdf to Canvas. Provide me a link here to your github.
+
+Link[https://github.com/RaimundoEspejo/Coding_Challenge_7.git]
