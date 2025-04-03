@@ -28,7 +28,7 @@ STAND$Rep <- as.factor(STAND$Rep)
 
 ```{r}
 # Fit the model with interaction
-linear_model <- lm(Emergence ~ Treatment * DaysAfterPlanting, data = STAND)
+linear_model <- lm(Emergence ~ Treatment + DaysAfterPlanting + Treatment:DaysAfterPlanting, data = STAND)
 
 # Summary of the linear model
 summary(linear_model)
