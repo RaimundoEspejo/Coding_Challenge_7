@@ -2,7 +2,10 @@
 title: "Coding_Challenge_7"
 author: "Raimundo Espejo and Camila Cuadrado"
 date: "2025-04-03"
-output: pdf_document
+output: 
+  md_document:
+    variant: gfm
+  pdf_document:
 ---
 
 1. Read in the data called “PlantEmergence.csv” using a relative file path and load the following libraries. tidyverse, lme4, emmeans, multcomp, and multcompView. Turn the Treatment , DaysAfterPlanting  and Rep into factors using the function as.factor
